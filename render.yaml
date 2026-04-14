@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: backend-aselea
+    env: node
+    plan: free
+    rootDir: .
+    buildCommand: npm install; npm run build
+    startCommand: npm start
+    autoDeploy: true
