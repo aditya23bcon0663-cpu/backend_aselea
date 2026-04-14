@@ -18,6 +18,15 @@ function isLocalDevOrigin(origin: string): boolean {
   return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
 }
 
+function isVercelPreviewOrigin(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin);
+    return hostname.endsWith(".vercel.app");
+  } catch {
+    return false;
+  }
+}
+
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -26,7 +35,12 @@ app.use(
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || env.allowedOrigins.includes(origin) || isLocalDevOrigin(origin)) {
+      if (
+        !origin
+        || env.allowedOrigins.includes(origin)
+        || isLocalDevOrigin(origin)
+        || isVercelPreviewOrigin(origin)
+      ) {
         callback(null, true);
         return;
       }
@@ -83,6 +97,11 @@ app.use((_request: Request, response: Response) => {
 });
 
 app.use((error: Error, _request: Request, response: Response, _next: NextFunction) => {
+  if (error.message.startsWith("CORS blocked for origin:")) {
+    response.status(403).json({ message: error.message });
+    return;
+  }
+
   if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
     response.status(413).json({ message: "Resume file is too large. Maximum allowed size is 10MB." });
     return;
